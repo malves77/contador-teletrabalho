@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import type { AppSettings, DayRecord, DayRecordType, DayRecordsMap, SemesterInfo } from '../types'
+import type { AppSettings, ClosedWeekInfo, DayRecord, DayRecordType, DayRecordsMap, SemesterInfo } from '../types'
 import {
   getTodayLisbon,
   getSemesterInfo,
@@ -10,7 +10,17 @@ import {
 } from '../utils/dateUtils'
 import { getHolidayOrClosureInfo } from '../utils/holidays'
 import { calculateSemesterBalance } from '../utils/balance'
-import { loadRecords, loadSettings, saveRecords, saveSettings } from '../utils/storage'
+import {
+  loadClosedWeeks,
+  loadFirstUsedWeek,
+  loadRecords,
+  loadSettings,
+  saveClosedWeeks,
+  saveFirstUsedWeek,
+  saveRecords,
+  saveSettings,
+} from '../utils/storage'
+import { processAutoCloseWeeks } from '../utils/autoClose'
 
 export interface UndoOfficeAction {
   date: string
@@ -21,20 +31,38 @@ export interface UseContadorStateOptions {
   initialToday?: string
   initialSettings?: AppSettings
   initialRecords?: DayRecordsMap
+  initialClosedWeeks?: Record<string, ClosedWeekInfo>
+  initialFirstUsedWeekKey?: string
 }
 
 export function useContadorState(options: UseContadorStateOptions = {}) {
   const [today, setToday] = useState<string>(() => options.initialToday || getTodayLisbon())
+
+  // Run initial auto-close computation synchronously on initial state creation
+  const initialData = useMemo(() => {
+    const loadedRecords = options.initialRecords || loadRecords()
+    const loadedClosed = options.initialClosedWeeks || loadClosedWeeks()
+    const loadedSettings = options.initialSettings || loadSettings()
+    const loadedFirstUsed = options.initialFirstUsedWeekKey || loadFirstUsedWeek()
+
+    return processAutoCloseWeeks({
+      today,
+      records: loadedRecords,
+      settings: loadedSettings,
+      closedWeeks: loadedClosed,
+      firstUsedWeekKey: loadedFirstUsed,
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [settings, setSettings] = useState<AppSettings>(() => {
     if (options.initialSettings) return options.initialSettings
     return loadSettings()
   })
 
-  const [records, setRecords] = useState<DayRecordsMap>(() => {
-    if (options.initialRecords) return options.initialRecords
-    return loadRecords()
-  })
+  const [records, setRecords] = useState<DayRecordsMap>(() => initialData.updatedRecords)
+  const [closedWeeks, setClosedWeeks] = useState<Record<string, ClosedWeekInfo>>(() => initialData.updatedClosedWeeks)
+  const [firstUsedWeekKey, setFirstUsedWeekKey] = useState<string | null>(() => initialData.effectiveFirstUsedWeekKey)
+  const [autoCloseNotification, setAutoCloseNotification] = useState<string | null>(() => initialData.summaryMessage)
 
   // Selected semester: defaults to the semester of "today"
   const [currentSemester, setCurrentSemester] = useState<SemesterInfo>(() => {
@@ -59,6 +87,61 @@ export function useContadorState(options: UseContadorStateOptions = {}) {
   useEffect(() => {
     saveRecords(records)
   }, [records])
+
+  // Persist closedWeeks whenever changed
+  useEffect(() => {
+    saveClosedWeeks(closedWeeks)
+  }, [closedWeeks])
+
+  // Persist firstUsedWeekKey whenever changed
+  useEffect(() => {
+    if (firstUsedWeekKey) {
+      saveFirstUsedWeek(firstUsedWeekKey)
+    }
+  }, [firstUsedWeekKey])
+
+  // Automatic weekly closing runner for external events (focus, visibility change)
+  const runAutoClose = useCallback(() => {
+    setRecords((currentRecords) => {
+      const result = processAutoCloseWeeks({
+        today,
+        records: currentRecords,
+        settings,
+        closedWeeks,
+        firstUsedWeekKey,
+      })
+
+      if (result.newlyClosedWeeks.length > 0) {
+        setClosedWeeks(result.updatedClosedWeeks)
+        if (result.summaryMessage) {
+          setAutoCloseNotification(result.summaryMessage)
+        }
+      }
+
+      if (result.effectiveFirstUsedWeekKey !== firstUsedWeekKey) {
+        setFirstUsedWeekKey(result.effectiveFirstUsedWeekKey)
+      }
+
+      return result.updatedRecords
+    })
+  }, [today, settings, closedWeeks, firstUsedWeekKey])
+
+  // Listen for app return / visibility changes to run auto-close
+  useEffect(() => {
+    const onVisibleOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        runAutoClose()
+      }
+    }
+
+    window.addEventListener('focus', onVisibleOrFocus)
+    document.addEventListener('visibilitychange', onVisibleOrFocus)
+
+    return () => {
+      window.removeEventListener('focus', onVisibleOrFocus)
+      document.removeEventListener('visibilitychange', onVisibleOrFocus)
+    }
+  }, [runAutoClose])
 
   // Calculate balance metrics for the currently selected semester
   const balance = useMemo(() => {
@@ -282,6 +365,10 @@ export function useContadorState(options: UseContadorStateOptions = {}) {
     })
   }, [])
 
+  const dismissAutoCloseNotification = useCallback(() => {
+    setAutoCloseNotification(null)
+  }, [])
+
   return {
     today,
     setToday,
@@ -292,6 +379,10 @@ export function useContadorState(options: UseContadorStateOptions = {}) {
     balance,
     todayInfo,
     lastOfficeAction,
+    closedWeeks,
+    autoCloseNotification,
+    dismissAutoCloseNotification,
+    runAutoClose,
     // Actions
     setMonth,
     nextMonth,

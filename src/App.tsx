@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Header } from './components/Header'
 import { QuickOfficeButton } from './components/QuickOfficeButton'
 import { BalanceSummary } from './components/BalanceSummary'
+import { AutoCloseBanner } from './components/AutoCloseBanner'
 import { MonthNavigator } from './components/MonthNavigator'
 import { CalendarGrid } from './components/CalendarGrid'
 import { Legend } from './components/Legend'
@@ -22,6 +23,8 @@ export function App() {
     balance,
     todayInfo,
     lastOfficeAction,
+    autoCloseNotification,
+    dismissAutoCloseNotification,
     prevMonth,
     nextMonth,
     goToToday,
@@ -71,6 +74,12 @@ export function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        {/* Weekly Auto-Close Summary Notification */}
+        <AutoCloseBanner
+          message={autoCloseNotification}
+          onDismiss={dismissAutoCloseNotification}
+        />
+
         {/* 2. Top area: Quick Office Button + Balance Summary */}
         <section className="space-y-3.5">
           {/* Quick Action Button - Prominent & mobile-first */}

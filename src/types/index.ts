@@ -3,11 +3,25 @@ export type DayRecordType = 'office' | 'telework' | 'vacation'
 export interface DayRecord {
   date: string // YYYY-MM-DD in Europe/Lisbon
   type: DayRecordType
-  source?: 'manual' | 'plan'
+  source?: 'manual' | 'plan' | 'auto_closed'
   updatedAt?: string
 }
 
 export type DayRecordsMap = Record<string, DayRecord> // Key is YYYY-MM-DD
+
+export interface ClosedWeekInfo {
+  weekKey: string // e.g. "week-2026-11-08"
+  saturdayDate: string // e.g. "2026-11-14"
+  closedAt: string
+  autoClosedDates: string[]
+  count: number
+}
+
+export interface AutoCloseSummary {
+  message: string
+  count: number
+  closedWeeks: ClosedWeekInfo[]
+}
 
 export interface InitialBalance {
   usedDays: number

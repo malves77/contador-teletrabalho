@@ -203,12 +203,9 @@ export function formatDateWithWeekdayPT(dateStr: string): string {
 }
 
 /**
- * Returns a week key for a week starting on Sunday and ending on Saturday.
- * Uses the ISO date string of the Sunday that starts the week.
- * E.g. for Saturday 2026-11-21, returns "week-2026-11-15".
- * For Sunday 2026-11-22, returns "week-2026-11-22" (different week).
+ * Returns the ISO date (YYYY-MM-DD) of the Sunday that starts the week (Sunday..Saturday) containing dateStr.
  */
-export function getSundayWeekKey(dateStr: string): string {
+export function getSundayForDate(dateStr: string): string {
   const { year, month, day } = splitISODate(dateStr)
   const date = new Date(Date.UTC(year, month - 1, day))
   const dowSundayFirst = date.getUTCDay() // 0 = Sunday ... 6 = Saturday
@@ -216,7 +213,25 @@ export function getSundayWeekKey(dateStr: string): string {
   const sundayYear = date.getUTCFullYear()
   const sundayMonth = date.getUTCMonth() + 1
   const sundayDay = date.getUTCDate()
-  return `week-${formatISODate(sundayYear, sundayMonth, sundayDay)}`
+  return formatISODate(sundayYear, sundayMonth, sundayDay)
+}
+
+/**
+ * Returns the ISO date (YYYY-MM-DD) of the Saturday that ends the week starting on weekSundayDateStr.
+ */
+export function getSaturdayForWeek(weekSundayDateStr: string): string {
+  return addDays(weekSundayDateStr, 6)
+}
+
+/**
+ * Returns a week key for a week starting on Sunday and ending on Saturday.
+ * Uses the ISO date string of the Sunday that starts the week.
+ * E.g. for Saturday 2026-11-21, returns "week-2026-11-15".
+ * For Sunday 2026-11-22, returns "week-2026-11-22" (different week).
+ */
+export function getSundayWeekKey(dateStr: string): string {
+  const sundayStr = getSundayForDate(dateStr)
+  return `week-${sundayStr}`
 }
 
 /**
