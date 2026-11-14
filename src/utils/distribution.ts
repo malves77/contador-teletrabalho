@@ -1,5 +1,5 @@
 import type { AppSettings, BalanceMetrics, DayRecordsMap, PlanDistributionResult, SemesterInfo } from '../types'
-import { addDays, getDayOfWeek, getIsoWeekKey, isWeekend } from './dateUtils'
+import { addDays, getDayOfWeek, getSundayWeekKey, isWeekend } from './dateUtils'
 import { getHolidayOrClosureInfo } from './holidays'
 
 /**
@@ -87,10 +87,10 @@ export function generateTeleworkPlan(
     }
   }
 
-  // Group eligible dates by calendar week to distribute as evenly as possible
+  // Group eligible dates by calendar week (Sunday to Saturday) to distribute as evenly as possible
   const weekMap = new Map<string, string[]>()
   for (const date of eligibleDates) {
-    const weekKey = getIsoWeekKey(date)
+    const weekKey = getSundayWeekKey(date)
     if (!weekMap.has(weekKey)) {
       weekMap.set(weekKey, [])
     }

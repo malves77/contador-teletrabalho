@@ -5,6 +5,7 @@ import {
   DAY_NAMES_SHORT_PT,
   formatISODate,
   getDayOfWeek,
+  getDayOfWeekSundayFirst,
   getDaysInMonth,
   isWeekend,
 } from '../utils/dateUtils'
@@ -29,12 +30,12 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 }) => {
   const totalDays = getDaysInMonth(year, month)
 
-  // Find the day of the week for the 1st day of the month (1 = Mon ... 7 = Sun)
+  // Find the day of the week for the 1st day of the month with Sunday first (0 = Dom ... 6 = Sáb)
   const firstDayDateStr = formatISODate(year, month, 1)
-  const firstDow = getDayOfWeek(firstDayDateStr) // 1 to 7
+  const firstDow = getDayOfWeekSundayFirst(firstDayDateStr) // 0 to 6
 
-  // Padding cells before the 1st
-  const paddingBefore = firstDow - 1
+  // Padding cells before the 1st (0 if 1st is Sunday)
+  const paddingBefore = firstDow
 
   const days: { day: number; dateStr: string }[] = []
   for (let d = 1; d <= totalDays; d++) {
@@ -46,10 +47,10 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
-      {/* Weekday headers */}
+      {/* Weekday headers: Dom, Seg, Ter, Qua, Qui, Sex, Sáb */}
       <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50/70 text-center text-xs font-bold text-slate-500 py-2.5">
         {DAY_NAMES_SHORT_PT.map((name, i) => (
-          <div key={name} className={i >= 5 ? 'text-slate-400' : 'text-slate-700'}>
+          <div key={name} className={i === 0 || i === 6 ? 'text-slate-400' : 'text-slate-700'}>
             {name}
           </div>
         ))}

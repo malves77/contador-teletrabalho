@@ -1,8 +1,10 @@
-import type { AppSettings, DayRecordsMap } from '../types'
+import type { AppSettings, ClosedWeekInfo, DayRecordsMap } from '../types'
 
 export const STORAGE_KEYS = {
   SETTINGS: 'contador_teletrabalho_settings',
   RECORDS: 'contador_teletrabalho_records',
+  CLOSED_WEEKS: 'contador_teletrabalho_closed_weeks',
+  FIRST_USED_WEEK: 'contador_teletrabalho_first_used_week',
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -58,5 +60,42 @@ export function saveRecords(records: DayRecordsMap): void {
     localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(records))
   } catch (e) {
     console.error('Erro ao guardar registos no localStorage:', e)
+  }
+}
+
+export function loadClosedWeeks(): Record<string, ClosedWeekInfo> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CLOSED_WEEKS)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return typeof parsed === 'object' && parsed !== null ? parsed : {}
+  } catch (e) {
+    console.error('Erro ao carregar semanas fechadas do localStorage:', e)
+    return {}
+  }
+}
+
+export function saveClosedWeeks(closedWeeks: Record<string, ClosedWeekInfo>): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CLOSED_WEEKS, JSON.stringify(closedWeeks))
+  } catch (e) {
+    console.error('Erro ao guardar semanas fechadas no localStorage:', e)
+  }
+}
+
+export function loadFirstUsedWeek(): string | null {
+  try {
+    return localStorage.getItem(STORAGE_KEYS.FIRST_USED_WEEK)
+  } catch (e) {
+    console.error('Erro ao carregar primeira semana de utilização do localStorage:', e)
+    return null
+  }
+}
+
+export function saveFirstUsedWeek(weekKey: string): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.FIRST_USED_WEEK, weekKey)
+  } catch (e) {
+    console.error('Erro ao guardar primeira semana de utilização no localStorage:', e)
   }
 }
