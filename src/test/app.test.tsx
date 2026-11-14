@@ -51,4 +51,16 @@ describe('Aplicação Contador de Teletrabalho (UI)', () => {
     expect(screen.getByText('Data de início')).toBeInTheDocument()
     expect(screen.getByText('Data de fim')).toBeInTheDocument()
   })
+
+  it('apresenta o domingo na primeira coluna do calendário mensal na ordem Dom, Seg, Ter, Qua, Qui, Sex, Sáb', () => {
+    const { container } = render(<App />)
+
+    // O cabeçalho dos dias da semana
+    const headerRow = container.querySelector('.grid-cols-7.border-b')
+    expect(headerRow).not.toBeNull()
+
+    const dayHeaders = Array.from(headerRow!.children).map((el) => el.textContent?.trim())
+    expect(dayHeaders).toEqual(['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'])
+    expect(dayHeaders[0]).toBe('Dom')
+  })
 })
