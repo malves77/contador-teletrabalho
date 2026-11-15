@@ -11,6 +11,7 @@ import { VacationRangeModal } from './components/VacationRangeModal'
 import { PlanModal } from './components/PlanModal'
 import { SettingsModal } from './components/SettingsModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { UpdatePrompt } from './components/UpdatePrompt'
 import { useContadorState } from './hooks/useContadorState'
 
 export function App() {
@@ -36,7 +37,14 @@ export function App() {
     markVacationRange,
     applyPlan,
     updateSettings,
+    closedWeeks,
+    firstUsedWeekKey,
+    replaceAllData,
   } = useContadorState()
+
+  const [importNotice, setImportNotice] = useState<string | null>(null)
+  // Muda a cada abertura para o modal recomeçar sempre com as definições guardadas
+  const [settingsKey, setSettingsKey] = useState(0)
 
   // Modal visibility states
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
@@ -69,12 +77,16 @@ export function App() {
         currentSemester={currentSemester}
         onPrevSemester={prevSemester}
         onNextSemester={nextSemester}
-        onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onOpenSettings={() => {
+          setSettingsKey((k) => k + 1)
+          setIsSettingsModalOpen(true)
+        }}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Weekly Auto-Close Summary Notification */}
+        <AutoCloseBanner message={importNotice} onDismiss={() => setImportNotice(null)} />
         <AutoCloseBanner
           message={autoCloseNotification}
           onDismiss={dismissAutoCloseNotification}
@@ -129,6 +141,7 @@ export function App() {
       </footer>
 
       {/* Modals & Dialogs */}
+      <UpdatePrompt />
       {/* Day Edit Modal */}
       <DayModal
         date={selectedDay}
@@ -161,7 +174,17 @@ export function App() {
 
       {/* Settings Modal */}
       <SettingsModal
+        key={settingsKey}
         isOpen={isSettingsModalOpen}
+        today={today}
+        getCurrentData={() => ({ settings, records, closedWeeks, firstUsedWeekKey })}
+        onImport={(data, summary) => {
+          replaceAllData(data)
+          setIsSettingsModalOpen(false)
+          setImportNotice(
+            `Dados importados · ${summary.semesters} semestre(s) e ${summary.records} registo(s)`
+          )
+        }}
         settings={settings}
         currentSemester={currentSemester}
         onClose={() => setIsSettingsModalOpen(false)}

@@ -21,6 +21,7 @@ import {
   saveSettings,
 } from '../utils/storage'
 import { processAutoCloseWeeks } from '../utils/autoClose'
+import type { BackupData } from '../utils/backup'
 
 export interface UndoOfficeAction {
   date: string
@@ -101,10 +102,14 @@ export function useContadorState(options: UseContadorStateOptions = {}) {
   }, [firstUsedWeekKey])
 
   // Automatic weekly closing runner for external events (focus, visibility change)
+  const fixedToday = options.initialToday
   const runAutoClose = useCallback(() => {
+    // Ao voltar à app (ex.: PWA retomada noutro dia) recalcula "hoje" em Lisboa
+    const now = fixedToday || getTodayLisbon()
+    if (now !== today) setToday(now)
     setRecords((currentRecords) => {
       const result = processAutoCloseWeeks({
-        today,
+        today: now,
         records: currentRecords,
         settings,
         closedWeeks,
@@ -124,7 +129,7 @@ export function useContadorState(options: UseContadorStateOptions = {}) {
 
       return result.updatedRecords
     })
-  }, [today, settings, closedWeeks, firstUsedWeekKey])
+  }, [fixedToday, today, settings, closedWeeks, firstUsedWeekKey])
 
   // Listen for app return / visibility changes to run auto-close
   useEffect(() => {
@@ -369,6 +374,26 @@ export function useContadorState(options: UseContadorStateOptions = {}) {
     setAutoCloseNotification(null)
   }, [])
 
+  // Substitui todos os dados (importação já validada) e processa semanas pendentes
+  const replaceAllData = useCallback(
+    (data: BackupData) => {
+      const result = processAutoCloseWeeks({
+        today,
+        records: data.records,
+        settings: data.settings,
+        closedWeeks: data.closedWeeks,
+        firstUsedWeekKey: data.firstUsedWeekKey,
+      })
+      setSettings(data.settings)
+      setRecords(result.updatedRecords)
+      setClosedWeeks(result.updatedClosedWeeks)
+      setFirstUsedWeekKey(result.effectiveFirstUsedWeekKey)
+      setAutoCloseNotification(result.summaryMessage)
+      setLastOfficeAction(null)
+    },
+    [today]
+  )
+
   return {
     today,
     setToday,
@@ -380,9 +405,11 @@ export function useContadorState(options: UseContadorStateOptions = {}) {
     todayInfo,
     lastOfficeAction,
     closedWeeks,
+    firstUsedWeekKey,
     autoCloseNotification,
     dismissAutoCloseNotification,
     runAutoClose,
+    replaceAllData,
     // Actions
     setMonth,
     nextMonth,
