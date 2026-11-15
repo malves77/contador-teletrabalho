@@ -2,11 +2,16 @@ import React, { useState } from 'react'
 import { Settings as SettingsIcon, X, Plus, Trash2, Check } from 'lucide-react'
 import type { AppSettings, CustomDateItem, SemesterInfo } from '../types'
 import { DAY_NAMES_FULL_PT, formatDatePT } from '../utils/dateUtils'
+import { BackupSection } from './BackupSection'
+import type { BackupData, BackupSummary } from '../utils/backup'
 
 interface SettingsModalProps {
   isOpen: boolean
   settings: AppSettings
   currentSemester: SemesterInfo
+  today: string
+  getCurrentData: () => BackupData
+  onImport: (data: BackupData, summary: BackupSummary) => void
   onClose: () => void
   onSave: (updated: AppSettings) => void
 }
@@ -15,6 +20,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   settings,
   currentSemester,
+  today,
+  getCurrentData,
+  onImport,
   onClose,
   onSave,
 }) => {
@@ -340,6 +348,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </form>
           </div>
+
+          <hr className="border-slate-100" />
+
+          {/* 5. Cópia de segurança */}
+          <BackupSection today={today} getCurrentData={getCurrentData} onImport={onImport} />
         </div>
 
         {/* Footer actions */}
