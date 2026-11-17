@@ -270,13 +270,47 @@ export function downloadBackup(file: BackupFile, fileName: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+function isAndroidDevice(): boolean {
+  return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
+}
+
+function isAbortError(err: unknown): boolean {
+  if (typeof DOMException !== 'undefined' && err instanceof DOMException && err.name === 'AbortError') {
+    return true
+  }
+  return typeof err === 'object' && err !== null && 'name' in err && (err as { name?: unknown }).name === 'AbortError'
+}
+
+/**
+ * Cria o objeto File efetivo para partilha via Web Share API.
+ * No Android (Chrome e PWA instalada), o Chromium bloqueia ficheiros `.json` / `application/json`
+ * na lista de permissões da Web Share API com `NotAllowedError` ("Permission denied").
+ * Por isso, no Android usa-se `text/plain` com extensão `.txt` (aceite na importação).
+ */
+export function createShareableBackupFile(file: BackupFile, fileName: string): File {
+  const jsonText = JSON.stringify(file, null, 2)
+  if (isAndroidDevice()) {
+    const androidName = fileName.replace(/\.json$/i, '.txt')
+    return new File([jsonText], androidName, { type: 'text/plain' })
+  }
+  return new File([jsonText], fileName, { type: 'application/json' })
+}
+
 export function canShareBackup(file: BackupFile, fileName: string): boolean {
   try {
-    if (typeof navigator === 'undefined' || typeof navigator.share !== 'function' || typeof File === 'undefined') {
+    if (
+      typeof navigator === 'undefined' ||
+      typeof navigator.share !== 'function' ||
+      typeof navigator.canShare !== 'function' ||
+      typeof File === 'undefined'
+    ) {
       return false
     }
-    const f = new File([JSON.stringify(file)], fileName, { type: 'application/json' })
-    return typeof navigator.canShare === 'function' && navigator.canShare({ files: [f] })
+    const shareFile = createShareableBackupFile(file, fileName)
+    return navigator.canShare({
+      files: [shareFile],
+      title: 'Cópia de segurança · Contador de Teletrabalho',
+    })
   } catch {
     return false
   }
@@ -287,10 +321,21 @@ export async function shareBackup(
   fileName: string
 ): Promise<'shared' | 'cancelled' | 'failed'> {
   try {
-    const f = new File([JSON.stringify(file, null, 2)], fileName, { type: 'application/json' })
-    await navigator.share({ files: [f], title: 'Cópia de segurança · Contador de Teletrabalho' })
+    const shareFile = createShareableBackupFile(file, fileName)
+    const shareData: ShareData = {
+      files: [shareFile],
+      title: 'Cópia de segurança · Contador de Teletrabalho',
+    }
+    if (typeof navigator.canShare === 'function' && !navigator.canShare(shareData)) {
+      return 'failed'
+    }
+    await navigator.share(shareData)
     return 'shared'
-  } catch (e) {
-    return e instanceof DOMException && e.name === 'AbortError' ? 'cancelled' : 'failed'
+  } catch (err) {
+    if (isAbortError(err)) {
+      return 'cancelled'
+    }
+    console.warn('[backup] Falha ao partilhar ficheiro:', err)
+    return 'failed'
   }
 }
