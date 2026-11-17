@@ -1,26 +1,82 @@
 import React from 'react'
-import { AlertTriangle, Briefcase, CalendarClock, CheckCircle2, Compass } from 'lucide-react'
-import type { BalanceMetrics } from '../types'
+import { AlertTriangle, Briefcase, CalendarClock, CheckCircle2, Compass, Info } from 'lucide-react'
+import type { BalanceMetrics, ToleranceState } from '../types'
 
 interface BalanceSummaryProps {
   balance: BalanceMetrics
   hasInitialBalance?: boolean
 }
 
+function getMainNoticeStyles(state: ToleranceState, isQuotaExhausted: boolean) {
+  if (state === 'over_tolerance') {
+    return {
+      container: 'bg-rose-50 border-l-4 border-rose-500 text-rose-900',
+      subtext: 'text-rose-700',
+      icon: <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />,
+    }
+  }
+  if (state === 'within_tolerance') {
+    return {
+      container: 'bg-amber-50 border-l-4 border-amber-500 text-amber-900',
+      subtext: 'text-amber-800',
+      icon: <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />,
+    }
+  }
+  if (isQuotaExhausted) {
+    return {
+      container: 'bg-amber-50 border-l-4 border-amber-400 text-amber-900',
+      subtext: 'text-amber-800',
+      icon: <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />,
+    }
+  }
+  return {
+    container: 'bg-emerald-50 border-l-4 border-emerald-500 text-emerald-900',
+    subtext: 'text-emerald-700',
+    icon: <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />,
+  }
+}
+
 export const BalanceSummary: React.FC<BalanceSummaryProps> = ({ balance, hasInitialBalance }) => {
+  const { tolerance } = balance
+  const mainStyles = getMainNoticeStyles(tolerance.state, tolerance.isQuotaExhausted)
+
   return (
     <div className="space-y-3">
-      {/* Exceeded Quota Alert */}
-      {balance.isOverQuota && (
-        <div className="bg-rose-50 border-l-4 border-rose-500 p-4 rounded-xl flex items-start gap-3 shadow-2xs">
-          <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-          <div>
-            <h4 className="text-sm font-bold text-rose-900">Limite de quota ultrapassado</h4>
-            <p className="text-xs text-rose-700 mt-0.5">
-              O total de teletrabalho (usados + planeados) ultrapassa a quota em{' '}
-              <span className="font-bold">{balance.overQuotaDays} dia{balance.overQuotaDays > 1 ? 's' : ''}</span>.
-            </p>
-          </div>
+      {/* Main Tolerance Status Notice (based on used days) */}
+      <div
+        role="status"
+        data-testid="tolerance-notice"
+        data-tolerance-state={tolerance.state}
+        className={`${mainStyles.container} px-4 py-3 rounded-xl flex items-start gap-3 shadow-2xs`}
+      >
+        {mainStyles.icon}
+        <div className="min-w-0">
+          <p className="text-sm font-bold leading-snug">{tolerance.message}</p>
+          <p className={`text-xs mt-0.5 ${mainStyles.subtext}`}>
+            Quota normal: {balance.quota} dias · Tolerância de 15%: +{tolerance.toleranceDays}{' '}
+            {tolerance.toleranceDays === 1 ? 'dia' : 'dias'} (máximo {tolerance.maxDaysWithTolerance} dias)
+          </p>
+        </div>
+      </div>
+
+      {/* Future Plan Forecast Notice */}
+      {tolerance.forecastMessage && (
+        <div
+          role="status"
+          data-testid="tolerance-forecast-notice"
+          data-forecast-state={tolerance.forecastState ?? ''}
+          className={`${
+            tolerance.forecastState === 'over_tolerance'
+              ? 'bg-rose-50/90 border-l-4 border-rose-500 text-rose-900'
+              : 'bg-amber-50/80 border-l-4 border-amber-400 text-amber-900'
+          } px-4 py-3 rounded-xl flex items-start gap-3 shadow-2xs`}
+        >
+          {tolerance.forecastState === 'over_tolerance' ? (
+            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+          ) : (
+            <CalendarClock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          )}
+          <p className="text-xs sm:text-sm font-semibold leading-snug">{tolerance.forecastMessage}</p>
         </div>
       )}
 

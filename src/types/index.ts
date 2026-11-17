@@ -52,6 +52,21 @@ export interface SemesterInfo {
   endDate: string // YYYY-06-30 or YYYY-12-31
 }
 
+export type ToleranceState = 'within_quota' | 'within_tolerance' | 'over_tolerance'
+
+export interface BalanceToleranceInfo {
+  toleranceDays: number
+  maxDaysWithTolerance: number
+  state: ToleranceState
+  isQuotaExhausted: boolean
+  isToleranceExhausted: boolean
+  usedToleranceDays: number
+  overToleranceDays: number
+  message: string
+  forecastState: ToleranceState | null
+  forecastMessage: string | null
+}
+
 export interface BalanceMetrics {
   quota: number
   usedDays: number
@@ -60,6 +75,7 @@ export interface BalanceMetrics {
   afterPlanBalance: number
   isOverQuota: boolean
   overQuotaDays: number
+  tolerance: BalanceToleranceInfo
 }
 
 export interface PlanDistributionResult {
