@@ -36,10 +36,13 @@ export const BackupSection: React.FC<BackupSectionProps> = ({ today, getCurrentD
     const file = buildBackup(getCurrentData())
     const name = backupFileName(today)
     setError(null)
+    setStatus(null)
     if (opts.share) {
       const result = await shareBackup(file, name)
       if (result === 'shared') setStatus('Ficheiro partilhado.')
-      else if (result === 'failed') setError('Não foi possível partilhar. Use «Descarregar ficheiro».')
+      else if (result === 'failed') {
+        setError('Não foi possível partilhar. Use “Exportar dados” para guardar o ficheiro.')
+      }
       return
     }
     downloadBackup(file, name)
@@ -119,7 +122,7 @@ export const BackupSection: React.FC<BackupSectionProps> = ({ today, getCurrentD
         <input
           ref={inputRef}
           type="file"
-          accept="application/json,.json"
+          accept="application/json,.json,text/plain,.txt"
           className="hidden"
           aria-label="Ficheiro de cópia de segurança"
           data-testid="backup-file-input"
